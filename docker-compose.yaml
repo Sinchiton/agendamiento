@@ -1,0 +1,95 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports: ["3306:3306"]
+    volumes:
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL","mysqladmin ping -proot | grep 'mysqld is alive'"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+    networks: [mynet]
+
+  rabbit:
+    image: rabbitmq:3.13-management
+    ports: ["5672:5672","15672:15672"]
+    healthcheck:
+      test: ["CMD","rabbitmq-diagnostics","-q","ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+    networks: [mynet]
+
+  mcs_medicos:
+    build: { context: ./BACKEND/mcs_medicos }
+    environment:
+      PORT: 8082
+      DB_HOST: mysql
+      DB_NAME: medicosdb
+      DB_USER: root
+      DB_PASSWORD: root
+    depends_on:
+      mysql: { condition: service_healthy }
+    restart: unless-stopped
+    ports: ["8082:8082"]
+    networks: [mynet]
+
+  mcs_pacientes:
+    build: { context: ./BACKEND/mcs_pacientes }
+    environment:
+      PORT: 8083
+      DB_HOST: mysql
+      DB_NAME: pacientesdb
+      DB_USER: root
+      DB_PASSWORD: root
+    depends_on:
+      mysql: { condition: service_healthy }
+    restart: unless-stopped
+    ports: ["8083:8083"]
+    networks: [mynet]
+
+  mcs_notificaciones:
+    build: { context: ./BACKEND/mcs_notificaciones }
+    environment:
+      PORT: 8084
+      DB_HOST: mysql
+      DB_NAME: notifsdb
+      DB_USER: root
+      DB_PASSWORD: root
+      RABBIT_HOST: rabbit
+      RABBIT_EXCHANGE: citas.exchange
+      RABBIT_ROUTING_CITA: cita.confirmada
+      RABBIT_QUEUE_CITA: notifs.cita.confirmada.q
+    depends_on:
+      mysql: { condition: service_healthy }
+      rabbit: { condition: service_healthy }
+    restart: unless-stopped
+    ports: ["8084:8084"]
+    networks: [mynet]
+
+  mcs_agendamiento:
+    build: { context: ./BACKEND/mcs_agendamiento }
+    environment:
+      PORT: 8081
+      DB_HOST: mysql
+      DB_NAME: agendadb
+      DB_USER: root
+      DB_PASSWORD: root
+      MEDICOS_URL: http://mcs_medicos:8082
+      PACIENTES_URL: http://mcs_pacientes:8083
+      RABBIT_HOST: rabbit
+      RABBIT_EXCHANGE: citas.exchange
+      RABBIT_ROUTING_CITA: cita.confirmada
+    depends_on:
+      mysql: { condition: service_healthy }
+      rabbit: { condition: service_healthy }
+      mcs_medicos: { condition: service_started }
+      mcs_pacientes: { condition: service_started }
+    restart: unless-stopped
+    ports: ["8081:8081"]
+    networks: [mynet]
+
+networks: { mynet: {} }

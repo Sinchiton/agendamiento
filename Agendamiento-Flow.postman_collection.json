@@ -1,0 +1,77 @@
+{
+  "info": {
+    "name": "Agendamiento Flow",
+    "_postman_id": "6f6c2d22-2222-4c4a-bbbb-000000000002",
+    "description": "Crear paciente, crear médico y agendar turno.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1) Crear Paciente",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{PACIENTES_URL}}/api/pacientes", "host": ["{{PACIENTES_URL}}"], "path": ["api","pacientes"] },
+        "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Ana Perez\",\n  \"email\": \"ana@mail.com\",\n  \"telefono\": \"555-1000\",\n  \"activo\": true\n}" }
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "exec": [
+          "pm.test('200 OK', () => pm.response.to.have.status(200));",
+          "const j = pm.response.json(); pm.collectionVariables.set('pacienteId', j.id);"
+        ], "type":"text/javascript" }
+      }]
+    },
+    {
+      "name": "2) Crear Médico",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{MEDICOS_URL}}/api/medicos", "host": ["{{MEDICOS_URL}}"], "path": ["api","medicos"] },
+        "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Dr. Lopez\",\n  \"especialidad\": \"Clinica\",\n  \"activo\": true\n}" }
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "exec": [
+          "pm.test('200 OK', () => pm.response.to.have.status(200));",
+          "const j = pm.response.json(); pm.collectionVariables.set('medicoId', j.id);"
+        ], "type":"text/javascript" }
+      }]
+    },
+    {
+      "name": "3) Agendar Turno",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const d = new Date(Date.now() + 24*60*60*1000);",
+              "const pad=n=>n<10?'0'+n:n;",
+              "const fh = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());",
+              "pm.collectionVariables.set('FECHA_HORA', fh);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.expect(j.estado).to.eql('CONFIRMADO');",
+              "pm.collectionVariables.set('turnoId', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{AGENDAMIENTO_URL}}/api/turnos", "host": ["{{AGENDAMIENTO_URL}}"], "path": ["api","turnos"] },
+        "body": { "mode": "raw", "raw": "{\n  \"pacienteId\": {{pacienteId}},\n  \"medicoId\": {{medicoId}},\n  \"fechaHora\": \"{{FECHA_HORA}}\"\n}" }
+      }
+    }
+  ]
+}
