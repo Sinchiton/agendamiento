@@ -35,7 +35,10 @@ services:
       mysql: { condition: service_healthy }
     restart: unless-stopped
     ports: ["8082:8082"]
-    networks: [mynet]
+    networks:
+      mynet:
+        aliases:
+          - mcs-medicos   # 👈 alias con guion
 
   mcs_pacientes:
     build: { context: ./BACKEND/mcs_pacientes }
@@ -49,7 +52,10 @@ services:
       mysql: { condition: service_healthy }
     restart: unless-stopped
     ports: ["8083:8083"]
-    networks: [mynet]
+    networks:
+      mynet:
+        aliases:
+          - mcs-pacientes # 👈 alias con guion
 
   mcs_notificaciones:
     build: { context: ./BACKEND/mcs_notificaciones }
@@ -78,8 +84,8 @@ services:
       DB_NAME: agendadb
       DB_USER: root
       DB_PASSWORD: root
-      MEDICOS_URL: http://mcs_medicos:8082
-      PACIENTES_URL: http://mcs_pacientes:8083
+      MEDICOS_URL: http://mcs-medicos:8082     # 👈 usa el alias con guion
+      PACIENTES_URL: http://mcs-pacientes:8083 # 👈 usa el alias con guion
       RABBIT_HOST: rabbit
       RABBIT_EXCHANGE: citas.exchange
       RABBIT_ROUTING_CITA: cita.confirmada
@@ -92,4 +98,5 @@ services:
     ports: ["8081:8081"]
     networks: [mynet]
 
-networks: { mynet: {} }
+networks:
+  mynet: {}

@@ -2,8 +2,8 @@ package com.agendamiento.mcs_agendamiento.controller;
 
 import java.time.LocalDateTime;
 
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,11 +12,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.agendamiento.mcs_agendamiento.model.Turno;
 import com.agendamiento.mcs_agendamiento.service.TurnoService;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import jakarta.validation.constraints.NotNull;
 
 @RestController
 @RequestMapping("/api/turnos")
+@CrossOrigin(origins = "*")
 public class TurnoController {
 
     private final TurnoService service;
@@ -25,12 +27,18 @@ public class TurnoController {
         this.service = service;
     }
 
+    // JSON: acepta minutos y también segundos (opcionales)
     public record CrearTurnoReq(
             @NotNull Long pacienteId,
             @NotNull Long medicoId,
-            @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaHora) {}
+            @NotNull
+            @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm[:ss]") LocalDateTime fechaHora) {
 
-    public record TurnoRes(Long id, Long pacienteId, Long medicoId, LocalDateTime fechaHora, String estado) {}
+    }
+
+    public record TurnoRes(Long id, Long pacienteId, Long medicoId, LocalDateTime fechaHora, String estado) {
+
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
