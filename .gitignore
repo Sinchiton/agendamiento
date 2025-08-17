@@ -1,0 +1,132 @@
+# ================================
+# Repo raíz – Spring Boot (Maven) + posible Frontend + Docker + IDEs/SO
+# ================================
+
+############################
+# Sistemas Operativos
+############################
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+# Windows
+Thumbs.db
+ehthumbs.db
+$RECYCLE.BIN/
+# Archivos temporales comunes
+*.swp
+*.swo
+*.tmp
+*.temp
+*~
+*.orig
+
+############################
+# IDEs / Editores
+############################
+# VS Code (si quieres versionar algunos archivos, quita esta línea)
+.vscode/
+# IntelliJ / Android Studio
+**/.idea/
+*.iml
+*.ipr
+*.iws
+out/
+# Eclipse
+**/.project
+**/.classpath
+**/.settings/
+**/bin/
+# NetBeans
+**/nbproject/private/
+**/nbbuild/
+**/dist/
+**/nbdist/
+**/.nb-gradle/
+
+############################
+# Java / Maven / Spring Boot
+############################
+# Salidas de build
+**/target/
+**/build/
+# Clases y binarios
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+# Logs / dumps de JVM
+*.log
+hs_err_pid*
+replay_pid*
+# Archivos temporales de Maven
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+.mvn/timing.properties
+# Mantener el wrapper de Maven (¡no lo ignores!)
+!.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+!mvnw
+!mvnw.cmd
+
+############################
+# Docker / Contenedores
+############################
+# Archivos de entorno (secretos locales)
+.env
+**/.env
+# Overrides locales
+**/docker-compose.override.yml
+# Datos/volúmenes locales (ajusta si los usas)
+**/docker-data/
+**/docker-volume/
+**/tmp/
+
+############################
+# Frontend (si lo agregas en /FRONTEND o similar)
+############################
+**/node_modules/
+**/.npm/
+**/.cache/
+**/dist/
+**/build/
+*.tsbuildinfo
+# Mantén los lockfiles (útiles para reproducibilidad)
+#!package-lock.json
+#!yarn.lock
+#!pnpm-lock.yaml
+
+############################
+# Pruebas / Reportes
+############################
+# Reportes comunes
+**/surefire-reports/
+**/failsafe-reports/
+**/jacoco.exec
+**/jacoco-report/
+
+############################
+# Otros
+############################
+# Archivos temporales de herramientas
+*.pid
+*.seed
+*.pid.lock
+
+# ================================
+# NOTAS
+# - Se versionan: pom.xml, Dockerfile, docker-compose.yaml,
+#   y los application.properties de src/main/resources (ajusta si manejas secretos).
+# - Ya tienes .gitignore dentro de cada microservicio; este archivo raíz complementa
+#   a los de cada módulo (Git combina reglas).
+# - Si deseas versionar algunas configuraciones de VS Code, elimina la línea `.vscode/`
+#   o usa excepciones como:
+#   #!.vscode/settings.json
+#   #!.vscode/extensions.json
+# ================================
