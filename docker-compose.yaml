@@ -38,7 +38,7 @@ services:
     networks:
       mynet:
         aliases:
-          - mcs-medicos   # 👈 alias con guion
+          - mcs-medicos
 
   mcs_pacientes:
     build: { context: ./BACKEND/mcs_pacientes }
@@ -55,7 +55,7 @@ services:
     networks:
       mynet:
         aliases:
-          - mcs-pacientes # 👈 alias con guion
+          - mcs-pacientes
 
   mcs_notificaciones:
     build: { context: ./BACKEND/mcs_notificaciones }
@@ -84,8 +84,8 @@ services:
       DB_NAME: agendadb
       DB_USER: root
       DB_PASSWORD: root
-      MEDICOS_URL: http://mcs-medicos:8082     # 👈 usa el alias con guion
-      PACIENTES_URL: http://mcs-pacientes:8083 # 👈 usa el alias con guion
+      MEDICOS_URL: http://mcs-medicos:8082
+      PACIENTES_URL: http://mcs-pacientes:8083
       RABBIT_HOST: rabbit
       RABBIT_EXCHANGE: citas.exchange
       RABBIT_ROUTING_CITA: cita.confirmada
@@ -96,6 +96,18 @@ services:
       mcs_pacientes: { condition: service_started }
     restart: unless-stopped
     ports: ["8081:8081"]
+    networks: [mynet]
+
+  api_gateway:
+    image: nginx:alpine
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports: ["8080:80"]
+    depends_on:
+      - mcs_agendamiento
+      - mcs_medicos
+      - mcs_pacientes
+      - mcs_notificaciones
     networks: [mynet]
 
 networks:
