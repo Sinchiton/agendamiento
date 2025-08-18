@@ -27,8 +27,8 @@ import com.agendamiento.mcs_agendamiento.repository.TurnoRepository;
 public class TurnoService {
 
     // En el query param a Médicos mandamos solo hasta minutos
-    private static final DateTimeFormatter QP_FMT =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm", Locale.ROOT);
+    private static final DateTimeFormatter QP_FMT
+            = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm", Locale.ROOT);
 
     private final TurnoRepository repo;
     private final RestClient medicosClient;
@@ -41,23 +41,29 @@ public class TurnoService {
     @Value("${app.rabbit.routing.citaConfirmada}")
     private String rkCita;
 
-    public TurnoService(
-            TurnoRepository repo,
+    // 👇 Constructor explícito (sin Lombok)
+    public TurnoService(TurnoRepository repo,
             RestClient medicosClient,
             RestClient pacientesClient,
-            RabbitTemplate rabbit
-    ) {
+            RabbitTemplate rabbit) {
         this.repo = repo;
         this.medicosClient = medicosClient;
         this.pacientesClient = pacientesClient;
         this.rabbit = rabbit;
     }
 
-    /** Payload del evento que consumirá mcs_notificaciones */
+    /**
+     * Payload del evento que consumirá mcs_notificaciones
+     */
     public record CitaConfirmadaEvent(
-            Long turnoId, Long pacienteId, Long medicoId, LocalDateTime fechaHora) {}
+            Long turnoId, Long pacienteId, Long medicoId, LocalDateTime fechaHora) {
 
-    /** Crea un turno: valida Paciente y disponibilidad de Médico, evita duplicados y publica evento. */
+    }
+
+    /**
+     * Crea un turno: valida Paciente y disponibilidad de Médico, evita
+     * duplicados y publica evento.
+     */
     public Turno crearTurno(Long pacienteId, Long medicoId, LocalDateTime fechaHora) {
 
         // 1) Paciente debe existir
@@ -67,7 +73,6 @@ public class TurnoService {
                     .retrieve()
                     .toBodilessEntity();
         } catch (RestClientResponseException ex) {
-            // 404/400 -> exponemos un error claro al cliente
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Paciente no encontrado: " + pacienteId + " (" + ex.getStatusCode() + ")"
@@ -84,8 +89,8 @@ public class TurnoService {
             String fhParam = QP_FMT.format(fechaHora.truncatedTo(ChronoUnit.MINUTES));
             ok = medicosClient.get()
                     .uri(uri -> uri.path("/api/medicos/{id}/disponible")
-                                   .queryParam("fechaHora", fhParam)
-                                   .build(medicoId))
+                    .queryParam("fechaHora", fhParam)
+                    .build(medicoId))
                     .retrieve()
                     .body(Boolean.class);
         } catch (RestClientResponseException ex) {
@@ -119,20 +124,20 @@ public class TurnoService {
         t = repo.save(t);
 
         publicarCitaConfirmada(t);
-
         return t;
     }
 
-    /** Obtiene un turno por id o 404. */
+    /**
+     * Obtiene un turno por id o 404.
+     */
     public Turno obtener(Long id) {
         return repo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Turno no existe"));
+                HttpStatus.NOT_FOUND, "Turno no existe"));
     }
 
     /**
-     * Busca turnos con filtros opcionales y paginación.
-     * (Filtra en memoria; para datos grandes, ver la versión con Specifications.)
+     * Búsqueda con filtros + paginación (simple, filtra en memoria).
      */
     public Page<Turno> buscar(
             Optional<Long> pacienteId,
@@ -142,19 +147,18 @@ public class TurnoService {
             Optional<LocalDateTime> hasta,
             Pageable pageable
     ) {
-        List<Turno> all = repo.findAll(); // devuelve lista completa
+        List<Turno> all = repo.findAll();
 
         List<Turno> filtrados = all.stream()
                 .filter(t -> pacienteId.map(v -> Objects.equals(t.getPacienteId(), v)).orElse(true))
                 .filter(t -> medicoId.map(v -> Objects.equals(t.getMedicoId(), v)).orElse(true))
                 .filter(t -> estado.map(v -> {
-                    try {
-                        return t.getEstado() == EstadoTurno.valueOf(v.toUpperCase(Locale.ROOT));
-                    } catch (IllegalArgumentException e) {
-                        // si el estado recibido no existe, lo tratamos como no-coincidente
-                        return false;
-                    }
-                }).orElse(true))
+            try {
+                return t.getEstado().name().equalsIgnoreCase(v);
+            } catch (Exception e) {
+                return false;
+            }
+        }).orElse(true))
                 .filter(t -> desde.map(v -> !t.getFechaHora().isBefore(v)).orElse(true))
                 .filter(t -> hasta.map(v -> !t.getFechaHora().isAfter(v)).orElse(true))
                 .toList();
@@ -166,7 +170,9 @@ public class TurnoService {
         return new PageImpl<>(content, pageable, filtrados.size());
     }
 
-    /** Confirma un turno (idempotente) y publica evento si hubo cambio de estado. */
+    /**
+     * Confirma un turno (idempotente).
+     */
     public Turno confirmar(Long id) {
         Turno t = obtener(id);
         if (t.getEstado() != EstadoTurno.CONFIRMADO) {
@@ -177,19 +183,20 @@ public class TurnoService {
         return t;
     }
 
-    /** Cancela un turno (idempotente). */
+    /**
+     * Cancela un turno (idempotente).
+     */
     public Turno cancelar(Long id) {
         Turno t = obtener(id);
         if (t.getEstado() != EstadoTurno.CANCELADO) {
             t.setEstado(EstadoTurno.CANCELADO);
             t = repo.save(t);
-            // si quisieras, aquí podrías publicar un evento "cita.cancelada"
+            // aquí podrías publicar "cita.cancelada" si quisieras
         }
         return t;
     }
 
-    /* ---------------------------------- helpers ---------------------------------- */
-
+    /* ------------------------------- helpers -------------------------------- */
     private void publicarCitaConfirmada(Turno t) {
         rabbit.convertAndSend(
                 exchange,

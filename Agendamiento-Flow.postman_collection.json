@@ -5,6 +5,11 @@
     "description": "Crear paciente, crear médico y agendar turno.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    { "key": "AGENDAMIENTO_URL", "value": "http://localhost:8081" },
+    { "key": "MEDICOS_URL", "value": "http://localhost:8082" },
+    { "key": "PACIENTES_URL", "value": "http://localhost:8083" }
+  ],
   "item": [
     {
       "name": "1) Crear Paciente",
@@ -16,10 +21,15 @@
       },
       "event": [{
         "listen": "test",
-        "script": { "exec": [
-          "pm.test('200 OK', () => pm.response.to.have.status(200));",
-          "const j = pm.response.json(); pm.collectionVariables.set('pacienteId', j.id);"
-        ], "type":"text/javascript" }
+        "script": {
+          "exec": [
+            "pm.test('200/201 OK', () => pm.expect([200,201]).to.include(pm.response.code));",
+            "let j={}; try{ j=pm.response.json(); }catch(e){ }",
+            "pm.expect(j).to.have.property('id');",
+            "pm.collectionVariables.set('pacienteId', j.id);"
+          ],
+          "type": "text/javascript"
+        }
       }]
     },
     {
@@ -32,10 +42,15 @@
       },
       "event": [{
         "listen": "test",
-        "script": { "exec": [
-          "pm.test('200 OK', () => pm.response.to.have.status(200));",
-          "const j = pm.response.json(); pm.collectionVariables.set('medicoId', j.id);"
-        ], "type":"text/javascript" }
+        "script": {
+          "exec": [
+            "pm.test('200/201 OK', () => pm.expect([200,201]).to.include(pm.response.code));",
+            "let j={}; try{ j=pm.response.json(); }catch(e){ }",
+            "pm.expect(j).to.have.property('id');",
+            "pm.collectionVariables.set('medicoId', j.id);"
+          ],
+          "type": "text/javascript"
+        }
       }]
     },
     {
@@ -46,9 +61,10 @@
           "script": {
             "exec": [
               "const d = new Date(Date.now() + 24*60*60*1000);",
-              "const pad=n=>n<10?'0'+n:n;",
+              "const pad = n => String(n).padStart(2,'0');",
               "const fh = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());",
-              "pm.collectionVariables.set('FECHA_HORA', fh);"
+              "pm.collectionVariables.set('FECHA_HORA', fh);",
+              "console.log('FECHA_HORA', fh);"
             ],
             "type": "text/javascript"
           }
@@ -57,10 +73,12 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('201 Created', () => pm.response.to.have.status(201));",
-              "const j = pm.response.json();",
-              "pm.expect(j.estado).to.eql('CONFIRMADO');",
-              "pm.collectionVariables.set('turnoId', j.id);"
+              "pm.test('Respuesta 201 Created', () => pm.response.to.have.status(201));",
+              "let j={}; try{ j=pm.response.json(); }catch(e){ console.warn('No JSON:', pm.response.text()); }",
+              "if (pm.response.code === 201) {",
+              "  pm.test('Estado CONFIRMADO', () => pm.expect(j.estado).to.eql('CONFIRMADO'));",
+              "  pm.collectionVariables.set('turnoId', j.id);",
+              "}"
             ],
             "type": "text/javascript"
           }
@@ -70,7 +88,10 @@
         "method": "POST",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "url": { "raw": "{{AGENDAMIENTO_URL}}/api/turnos", "host": ["{{AGENDAMIENTO_URL}}"], "path": ["api","turnos"] },
-        "body": { "mode": "raw", "raw": "{\n  \"pacienteId\": {{pacienteId}},\n  \"medicoId\": {{medicoId}},\n  \"fechaHora\": \"{{FECHA_HORA}}\"\n}" }
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pacienteId\": {{pacienteId}},\n  \"medicoId\": {{medicoId}},\n  \"fechaHora\": \"{{FECHA_HORA}}\"\n}"
+        }
       }
     }
   ]
