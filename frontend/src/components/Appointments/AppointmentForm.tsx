@@ -3,8 +3,8 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import type { CreateAppointmentRequest, Doctor, Patient } from "../../types/appointment"
-import { DoctorService } from "../../services/doctorService"
-import { PatientService } from "../../services/patientService"
+import { getAllDoctors } from "../../services/doctorService"
+import { getAllPatients } from "../../services/patientService"
 import { AppointmentService } from "../../services/appointmentService"
 import LoadingSpinner from "../Common/LoadingSpinner"
 import Alert from "../Common/Alert"
@@ -16,8 +16,12 @@ interface AppointmentFormProps {
 
 const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }) => {
   const [formData, setFormData] = useState<CreateAppointmentRequest>({
-    patientId: "",
-    doctorId: "",
+    pacienteId: 0,
+    medicoId: 0,
+    fechaHora: "",
+  })
+
+  const [uiFormData, setUiFormData] = useState({
     appointmentDate: "",
     appointmentTime: "",
     reason: "",
@@ -36,15 +40,15 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
   }, [])
 
   useEffect(() => {
-    if (formData.doctorId && formData.appointmentDate) {
+    if (formData.medicoId && uiFormData.appointmentDate) {
       loadAvailableSlots()
     }
-  }, [formData.doctorId, formData.appointmentDate])
+  }, [formData.medicoId, uiFormData.appointmentDate])
 
   const loadInitialData = async () => {
     try {
       setLoading(true)
-      const [doctorsData, patientsData] = await Promise.all([DoctorService.getDoctors(), PatientService.getPatients()])
+      const [doctorsData, patientsData] = await Promise.all([getAllDoctors(), getAllPatients()])
       setDoctors(doctorsData)
       setPatients(patientsData)
     } catch (err) {
@@ -57,7 +61,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
   const loadAvailableSlots = async () => {
     try {
       setLoadingSlots(true)
-      const slots = await AppointmentService.getAvailableSlots(formData.doctorId, formData.appointmentDate)
+      const slots = await AppointmentService.getAvailableSlots(formData.medicoId.toString(), uiFormData.appointmentDate)
       setAvailableSlots(slots)
     } catch (err) {
       setError("Error al cargar los horarios disponibles")
@@ -68,13 +72,39 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
 
-    if (name === "doctorId" || name === "appointmentDate") {
+    if (name === "pacienteId" || name === "medicoId") {
       setFormData((prev) => ({
+        ...prev,
+        [name]: Number.parseInt(value) || 0,
+      }))
+    } else if (name === "appointmentDate" || name === "appointmentTime") {
+      setUiFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }))
+
+      if (name === "appointmentDate" || name === "appointmentTime") {
+        const date = name === "appointmentDate" ? value : uiFormData.appointmentDate
+        const time = name === "appointmentTime" ? value : uiFormData.appointmentTime
+
+        if (date && time) {
+          const fechaHora = `${date}T${time}:00`
+          setFormData((prev) => ({
+            ...prev,
+            fechaHora,
+          }))
+        }
+      }
+    } else {
+      setUiFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }))
+    }
+
+    if (name === "medicoId" || name === "appointmentDate") {
+      setUiFormData((prev) => ({
         ...prev,
         appointmentTime: "",
       }))
@@ -119,13 +149,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
         <div className="form-row">
           <div className="form-col">
             <div className="form-group">
-              <label htmlFor="patientId" className="form-label">
+              <label htmlFor="pacienteId" className="form-label">
                 Paciente *
               </label>
               <select
-                id="patientId"
-                name="patientId"
-                value={formData.patientId}
+                id="pacienteId"
+                name="pacienteId"
+                value={formData.pacienteId}
                 onChange={handleInputChange}
                 className="form-select"
                 required
@@ -133,7 +163,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
                 <option value="">Seleccionar paciente</option>
                 {patients.map((patient) => (
                   <option key={patient.id} value={patient.id}>
-                    {patient.firstName} {patient.lastName} - {patient.documentNumber}
+                    {patient.nombre} - {patient.email}
                   </option>
                 ))}
               </select>
@@ -142,13 +172,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
 
           <div className="form-col">
             <div className="form-group">
-              <label htmlFor="doctorId" className="form-label">
+              <label htmlFor="medicoId" className="form-label">
                 Doctor *
               </label>
               <select
-                id="doctorId"
-                name="doctorId"
-                value={formData.doctorId}
+                id="medicoId"
+                name="medicoId"
+                value={formData.medicoId}
                 onChange={handleInputChange}
                 className="form-select"
                 required
@@ -156,7 +186,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
                 <option value="">Seleccionar doctor</option>
                 {doctors.map((doctor) => (
                   <option key={doctor.id} value={doctor.id}>
-                    Dr. {doctor.firstName} {doctor.lastName} - {doctor.specialty}
+                    Dr. {doctor.nombre} - {doctor.especialidad}
                   </option>
                 ))}
               </select>
@@ -174,7 +204,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
                 type="date"
                 id="appointmentDate"
                 name="appointmentDate"
-                value={formData.appointmentDate}
+                value={uiFormData.appointmentDate}
                 onChange={handleInputChange}
                 className="form-input"
                 min={getTomorrowDate()}
@@ -191,11 +221,11 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
               <select
                 id="appointmentTime"
                 name="appointmentTime"
-                value={formData.appointmentTime}
+                value={uiFormData.appointmentTime}
                 onChange={handleInputChange}
                 className="form-select"
                 required
-                disabled={!formData.doctorId || !formData.appointmentDate || loadingSlots}
+                disabled={!formData.medicoId || !uiFormData.appointmentDate || loadingSlots}
               >
                 <option value="">Seleccionar horario</option>
                 {availableSlots.map((slot) => (
@@ -216,7 +246,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
             type="text"
             id="reason"
             name="reason"
-            value={formData.reason}
+            value={uiFormData.reason}
             onChange={handleInputChange}
             className="form-input"
             placeholder="Ej: Consulta general, control, etc."
@@ -231,7 +261,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
           <textarea
             id="notes"
             name="notes"
-            value={formData.notes}
+            value={uiFormData.notes}
             onChange={handleInputChange}
             className="form-textarea"
             placeholder="Información adicional relevante para la cita"

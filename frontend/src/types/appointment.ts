@@ -1,51 +1,60 @@
 export interface Patient {
-  id: string
-  firstName: string
-  lastName: string
+  id: number
+  nombre: string
   email: string
-  phone: string
-  documentNumber: string
-  birthDate: string
+  telefono: string | null
+  activo: boolean
 }
 
 export interface Doctor {
-  id: string
-  firstName: string
-  lastName: string
-  specialty: string
-  licenseNumber: string
+  id: number
+  nombre: string
+  especialidad: string
+  activo: boolean
 }
 
 export interface Appointment {
-  id: string
-  patientId: string
-  doctorId: string
-  appointmentDate: string
-  appointmentTime: string
-  status: AppointmentStatus
-  reason: string
-  notes?: string
-  createdAt: string
-  updatedAt: string
+  id: number
+  pacienteId: number
+  medicoId: number
+  fechaHora: string // ISO datetime string
+  estado: EstadoTurno
+  creadoEn?: string // ISO datetime string
   patient?: Patient
   doctor?: Doctor
 }
 
+export enum EstadoTurno {
+  CONFIRMADO = "CONFIRMADO",
+  CANCELADO = "CANCELADO",
+  COMPLETADO = "COMPLETADO",
+  NO_SHOW = "NO_SHOW",
+}
+
 export enum AppointmentStatus {
-  SCHEDULED = "SCHEDULED",
-  CONFIRMED = "CONFIRMED",
-  CANCELLED = "CANCELLED",
-  COMPLETED = "COMPLETED",
+  SCHEDULED = "CONFIRMADO", // Maps to backend's CONFIRMADO
+  CONFIRMED = "CONFIRMADO",
+  CANCELLED = "CANCELADO",
+  COMPLETED = "COMPLETADO",
   NO_SHOW = "NO_SHOW",
 }
 
 export interface CreateAppointmentRequest {
-  patientId: string
-  doctorId: string
-  appointmentDate: string
-  appointmentTime: string
-  reason: string
-  notes?: string
+  pacienteId: number
+  medicoId: number
+  fechaHora: string // ISO datetime string format
+}
+
+export interface CreatePatientRequest {
+  nombre: string
+  email: string
+  telefono?: string
+}
+
+export interface CreateDoctorRequest {
+  nombre: string
+  especialidad: string
+  activo: boolean
 }
 
 export interface UpdateAppointmentRequest {
@@ -53,13 +62,13 @@ export interface UpdateAppointmentRequest {
   appointmentTime?: string
   reason?: string
   notes?: string
-  status?: AppointmentStatus
+  status?: string
 }
 
 export interface AppointmentFilters {
-  patientId?: string
-  doctorId?: string
-  status?: AppointmentStatus
+  pacienteId?: number
+  medicoId?: number
+  estado?: string
   dateFrom?: string
   dateTo?: string
 }

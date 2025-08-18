@@ -27,6 +27,16 @@ const Navigation: React.FC = () => {
               Consultar Citas
             </Link>
           </li>
+          <li className="nav-item">
+            <Link to="/patients/new" className={isActive("/patients/new")}>
+              Agregar Paciente
+            </Link>
+          </li>
+          <li className="nav-item">
+            <Link to="/doctors/new" className={isActive("/doctors/new")}>
+              Agregar Médico
+            </Link>
+          </li>
         </ul>
       </div>
     </nav>
