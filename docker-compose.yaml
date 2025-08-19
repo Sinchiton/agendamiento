@@ -74,8 +74,10 @@ services:
       rabbit: { condition: service_healthy }
     restart: unless-stopped
     ports: ["8084:8084"]
-    networks: [mynet]
-
+    networks:
+      mynet:
+        aliases:
+          - mcs-notificaciones
   mcs_agendamiento:
     build: { context: ./BACKEND/mcs_agendamiento }
     environment:
@@ -96,7 +98,10 @@ services:
       mcs_pacientes: { condition: service_started }
     restart: unless-stopped
     ports: ["8081:8081"]
-    networks: [mynet]
+    networks:
+      mynet:
+        aliases:
+          - mcs-agendamiento
 
   api_gateway:
     image: nginx:alpine

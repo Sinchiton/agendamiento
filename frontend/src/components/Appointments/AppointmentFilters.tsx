@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { type AppointmentFilters, AppointmentStatus, type Doctor, type Patient } from "../../types/appointment"
+import type { AppointmentFilters, Doctor, Patient } from "../../types/appointment"
 import { DoctorService } from "../../services/doctorService"
 import { PatientService } from "../../services/patientService"
 
@@ -22,7 +22,10 @@ const AppointmentFiltersComponent: React.FC<AppointmentFiltersProps> = ({ filter
 
   const loadFilterData = async () => {
     try {
-      const [doctorsData, patientsData] = await Promise.all([DoctorService.getDoctors(), PatientService.getPatients()])
+      const [doctorsData, patientsData] = await Promise.all([
+        DoctorService.getAllDoctors(),
+        PatientService.getAllPatients(),
+      ])
       setDoctors(doctorsData)
       setPatients(patientsData)
     } catch (err) {
@@ -72,14 +75,14 @@ const AppointmentFiltersComponent: React.FC<AppointmentFiltersProps> = ({ filter
               <div className="form-group">
                 <label className="form-label">Paciente</label>
                 <select
-                  value={filters.patientId || ""}
-                  onChange={(e) => handleFilterChange("patientId", e.target.value)}
+                  value={filters.pacienteId || ""}
+                  onChange={(e) => handleFilterChange("pacienteId", e.target.value)}
                   className="form-select"
                 >
                   <option value="">Todos los pacientes</option>
                   {patients.map((patient) => (
                     <option key={patient.id} value={patient.id}>
-                      {patient.firstName} {patient.lastName}
+                      {patient.nombre}
                     </option>
                   ))}
                 </select>
@@ -90,14 +93,14 @@ const AppointmentFiltersComponent: React.FC<AppointmentFiltersProps> = ({ filter
               <div className="form-group">
                 <label className="form-label">Doctor</label>
                 <select
-                  value={filters.doctorId || ""}
-                  onChange={(e) => handleFilterChange("doctorId", e.target.value)}
+                  value={filters.medicoId || ""}
+                  onChange={(e) => handleFilterChange("medicoId", e.target.value)}
                   className="form-select"
                 >
                   <option value="">Todos los doctores</option>
                   {doctors.map((doctor) => (
                     <option key={doctor.id} value={doctor.id}>
-                      Dr. {doctor.firstName} {doctor.lastName}
+                      Dr. {doctor.nombre}
                     </option>
                   ))}
                 </select>
@@ -108,16 +111,14 @@ const AppointmentFiltersComponent: React.FC<AppointmentFiltersProps> = ({ filter
               <div className="form-group">
                 <label className="form-label">Estado</label>
                 <select
-                  value={filters.status || ""}
-                  onChange={(e) => handleFilterChange("status", e.target.value)}
+                  value={filters.estado || ""}
+                  onChange={(e) => handleFilterChange("estado", e.target.value)}
                   className="form-select"
                 >
                   <option value="">Todos los estados</option>
-                  <option value={AppointmentStatus.SCHEDULED}>Programada</option>
-                  <option value={AppointmentStatus.CONFIRMED}>Confirmada</option>
-                  <option value={AppointmentStatus.CANCELLED}>Cancelada</option>
-                  <option value={AppointmentStatus.COMPLETED}>Completada</option>
-                  <option value={AppointmentStatus.NO_SHOW}>No Asistió</option>
+                  <option value="CONFIRMADO">Confirmado</option>
+                  <option value="CANCELADO">Cancelado</option>
+                  <option value="EXTRA">Extra</option>
                 </select>
               </div>
             </div>
@@ -128,9 +129,9 @@ const AppointmentFiltersComponent: React.FC<AppointmentFiltersProps> = ({ filter
               <div className="form-group">
                 <label className="form-label">Fecha desde</label>
                 <input
-                  type="date"
-                  value={filters.dateFrom || ""}
-                  onChange={(e) => handleFilterChange("dateFrom", e.target.value)}
+                  type="datetime-local"
+                  value={filters.desde || ""}
+                  onChange={(e) => handleFilterChange("desde", e.target.value)}
                   className="form-input"
                 />
               </div>
@@ -140,9 +141,9 @@ const AppointmentFiltersComponent: React.FC<AppointmentFiltersProps> = ({ filter
               <div className="form-group">
                 <label className="form-label">Fecha hasta</label>
                 <input
-                  type="date"
-                  value={filters.dateTo || ""}
-                  onChange={(e) => handleFilterChange("dateTo", e.target.value)}
+                  type="datetime-local"
+                  value={filters.hasta || ""}
+                  onChange={(e) => handleFilterChange("hasta", e.target.value)}
                   className="form-input"
                 />
               </div>

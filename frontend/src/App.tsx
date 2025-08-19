@@ -6,6 +6,7 @@ import NewAppointment from "./pages/NewAppointment"
 import Appointments from "./pages/Appointments"
 import NewPatient from "./pages/NewPatient"
 import NewDoctor from "./pages/NewDoctor"
+import DoctorSchedules from "./pages/DoctorSchedules"
 import "./styles/global.css"
 
 const App: React.FC = () => {
@@ -18,6 +19,7 @@ const App: React.FC = () => {
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/patients/new" element={<NewPatient />} />
           <Route path="/doctors/new" element={<NewDoctor />} />
+          <Route path="/doctors/schedules" element={<DoctorSchedules />} />
         </Routes>
       </Layout>
     </Router>

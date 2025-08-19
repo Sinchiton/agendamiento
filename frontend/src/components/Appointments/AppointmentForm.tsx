@@ -24,26 +24,24 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
   const [uiFormData, setUiFormData] = useState({
     appointmentDate: "",
     appointmentTime: "",
-    reason: "",
-    notes: "",
   })
 
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [patients, setPatients] = useState<Patient[]>([])
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
-  const [loadingSlots, setLoadingSlots] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [suggestedTimes, setSuggestedTimes] = useState<string[]>([])
 
   useEffect(() => {
     loadInitialData()
   }, [])
 
   useEffect(() => {
-    if (formData.medicoId && uiFormData.appointmentDate) {
-      loadAvailableSlots()
+    if (uiFormData.appointmentDate) {
+      generateTimeSlots()
     }
-  }, [formData.medicoId, uiFormData.appointmentDate])
+  }, [uiFormData.appointmentDate])
 
   const loadInitialData = async () => {
     try {
@@ -58,16 +56,34 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
     }
   }
 
-  const loadAvailableSlots = async () => {
-    try {
-      setLoadingSlots(true)
-      const slots = await AppointmentService.getAvailableSlots(formData.medicoId.toString(), uiFormData.appointmentDate)
-      setAvailableSlots(slots)
-    } catch (err) {
-      setError("Error al cargar los horarios disponibles")
-    } finally {
-      setLoadingSlots(false)
+  const generateTimeSlots = () => {
+    const slots: string[] = []
+    for (let hour = 8; hour < 17; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const timeString = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
+        slots.push(timeString)
+      }
     }
+    setAvailableSlots(slots)
+  }
+
+  const generateSuggestedTimes = (currentTime: string) => {
+    const currentHour = Number.parseInt(currentTime.split(":")[0])
+    const currentMinute = Number.parseInt(currentTime.split(":")[1])
+    const suggestions: string[] = []
+
+    for (let i = 1; i <= 3; i++) {
+      const newMinutes = currentMinute + i * 30
+      const newHour = currentHour + Math.floor(newMinutes / 60)
+      const finalMinute = newMinutes % 60
+
+      if (newHour < 17) {
+        const timeString = `${newHour.toString().padStart(2, "0")}:${finalMinute.toString().padStart(2, "0")}`
+        suggestions.push(timeString)
+      }
+    }
+
+    return suggestions
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -96,18 +112,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
           }))
         }
       }
-    } else {
-      setUiFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }))
     }
 
-    if (name === "medicoId" || name === "appointmentDate") {
-      setUiFormData((prev) => ({
-        ...prev,
-        appointmentTime: "",
-      }))
+    if (name === "appointmentTime") {
+      setSuggestedTimes([])
     }
   }
 
@@ -117,14 +125,41 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
     try {
       setLoading(true)
       setError(null)
+      setSuggestedTimes([])
 
       await AppointmentService.createAppointment(formData)
       onSuccess()
     } catch (err: any) {
-      setError(err.response?.data?.message || "Error al crear la cita")
+      const errorMessage = err.response?.data?.message || "Error al crear la cita"
+
+      if (errorMessage.includes("Médico no disponible") || errorMessage.includes("no disponible")) {
+        const suggestions = generateSuggestedTimes(uiFormData.appointmentTime)
+        setSuggestedTimes(suggestions)
+        setError(`El médico no está disponible en este horario. Te sugerimos los siguientes horarios alternativos:`)
+      } else {
+        setError(errorMessage)
+      }
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSuggestedTimeClick = (suggestedTime: string) => {
+    setUiFormData((prev) => ({
+      ...prev,
+      appointmentTime: suggestedTime,
+    }))
+
+    if (uiFormData.appointmentDate) {
+      const fechaHora = `${uiFormData.appointmentDate}T${suggestedTime}:00`
+      setFormData((prev) => ({
+        ...prev,
+        fechaHora,
+      }))
+    }
+
+    setSuggestedTimes([])
+    setError(null)
   }
 
   const getTomorrowDate = () => {
@@ -144,6 +179,27 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
       </div>
 
       {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
+
+      {suggestedTimes.length > 0 && (
+        <div className="card" style={{ backgroundColor: "#f8f9fa", border: "1px solid #dee2e6", marginBottom: "1rem" }}>
+          <div className="card-header">
+            <h4 style={{ margin: 0, color: "#495057" }}>Horarios Alternativos Sugeridos:</h4>
+          </div>
+          <div style={{ padding: "1rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            {suggestedTimes.map((time) => (
+              <button
+                key={time}
+                type="button"
+                onClick={() => handleSuggestedTimeClick(time)}
+                className="btn btn-outline-primary"
+                style={{ fontSize: "0.9rem", padding: "0.5rem 1rem" }}
+              >
+                {time}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="form-row">
@@ -216,7 +272,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
           <div className="form-col">
             <div className="form-group">
               <label htmlFor="appointmentTime" className="form-label">
-                Horario * {loadingSlots && "(Cargando...)"}
+                Horario * (8:00 AM - 5:00 PM)
               </label>
               <select
                 id="appointmentTime"
@@ -225,7 +281,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
                 onChange={handleInputChange}
                 className="form-select"
                 required
-                disabled={!formData.medicoId || !uiFormData.appointmentDate || loadingSlots}
+                disabled={!uiFormData.appointmentDate}
               >
                 <option value="">Seleccionar horario</option>
                 {availableSlots.map((slot) => (
@@ -236,37 +292,6 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ onSuccess, onCancel }
               </select>
             </div>
           </div>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="reason" className="form-label">
-            Motivo de la consulta *
-          </label>
-          <input
-            type="text"
-            id="reason"
-            name="reason"
-            value={uiFormData.reason}
-            onChange={handleInputChange}
-            className="form-input"
-            placeholder="Ej: Consulta general, control, etc."
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="notes" className="form-label">
-            Notas adicionales
-          </label>
-          <textarea
-            id="notes"
-            name="notes"
-            value={uiFormData.notes}
-            onChange={handleInputChange}
-            className="form-textarea"
-            placeholder="Información adicional relevante para la cita"
-            rows={3}
-          />
         </div>
 
         <div className="btn-group">
