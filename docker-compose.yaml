@@ -115,5 +115,21 @@ services:
       - mcs_notificaciones
     networks: [mynet]
 
+  frontend:
+    build:
+      context: ./frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules   # evita conflictos entre host y contenedor
+    ports:
+      - "5173:5173"
+    command: ["npm","run","dev","--","--host","0.0.0.0","--port","5173"]
+    depends_on:
+      - api_gateway
+    networks:
+      mynet:
+        aliases:
+          - frontend
+
 networks:
   mynet: {}
