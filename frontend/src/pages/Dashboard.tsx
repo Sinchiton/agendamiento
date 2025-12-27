@@ -3,16 +3,15 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { AppointmentService } from "../services/appointmentService"
-import { type Appointment, AppointmentStatus } from "../types/appointment"
+import type { Appointment } from "../types/appointment"
 import LoadingSpinner from "../components/Common/LoadingSpinner"
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState({
     total: 0,
-    scheduled: 0,
-    confirmed: 0,
-    completed: 0,
-    cancelled: 0,
+    confirmado: 0,
+    cancelado: 0,
+    extra: 0,
   })
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,24 +24,25 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true)
 
-      const today = new Date().toISOString().split("T")[0]
+      const today = new Date()
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString()
+      const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString()
 
-      // Load all appointments for stats
-      const allAppointments = await AppointmentService.getAppointments()
-
-      // Load today's appointments
-      const todayAppts = await AppointmentService.getAppointments({
-        dateFrom: today,
-        dateTo: today,
+      const allAppointmentsResponse = await AppointmentService.getAppointments({ size: 1000 })
+      const todayAppointmentsResponse = await AppointmentService.getAppointments({
+        desde: todayStart,
+        hasta: todayEnd,
+        size: 100,
       })
 
-      // Calculate stats
+      const allAppointments = allAppointmentsResponse.content
+      const todayAppts = todayAppointmentsResponse.content
+
       const statsData = {
-        total: allAppointments.length,
-        scheduled: allAppointments.filter((a) => a.status === AppointmentStatus.SCHEDULED).length,
-        confirmed: allAppointments.filter((a) => a.status === AppointmentStatus.CONFIRMED).length,
-        completed: allAppointments.filter((a) => a.status === AppointmentStatus.COMPLETED).length,
-        cancelled: allAppointments.filter((a) => a.status === AppointmentStatus.CANCELLED).length,
+        total: allAppointmentsResponse.totalElements,
+        confirmado: allAppointments.filter((a) => a.estado === "CONFIRMADO").length,
+        cancelado: allAppointments.filter((a) => a.estado === "CANCELADO").length,
+        extra: allAppointments.filter((a) => a.estado === "EXTRA").length,
       }
 
       setStats(statsData)
@@ -54,8 +54,11 @@ const Dashboard: React.FC = () => {
     }
   }
 
-  const formatTime = (timeString: string) => {
-    return timeString
+  const formatTime = (fechaHora: string) => {
+    return new Date(fechaHora).toLocaleTimeString("es-ES", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
   }
 
   if (loading) {
@@ -92,37 +95,25 @@ const Dashboard: React.FC = () => {
           <div
             style={{
               padding: "1.5rem",
-              backgroundColor: "#fff3e0",
-              borderRadius: "8px",
-              textAlign: "center",
-            }}
-          >
-            <h3 style={{ margin: "0 0 0.5rem 0", color: "#f57c00" }}>Programadas</h3>
-            <p style={{ fontSize: "2rem", fontWeight: "bold", margin: 0, color: "#f57c00" }}>{stats.scheduled}</p>
-          </div>
-
-          <div
-            style={{
-              padding: "1.5rem",
               backgroundColor: "#e8f5e8",
               borderRadius: "8px",
               textAlign: "center",
             }}
           >
             <h3 style={{ margin: "0 0 0.5rem 0", color: "#2e7d32" }}>Confirmadas</h3>
-            <p style={{ fontSize: "2rem", fontWeight: "bold", margin: 0, color: "#2e7d32" }}>{stats.confirmed}</p>
+            <p style={{ fontSize: "2rem", fontWeight: "bold", margin: 0, color: "#2e7d32" }}>{stats.confirmado}</p>
           </div>
 
           <div
             style={{
               padding: "1.5rem",
-              backgroundColor: "#f3e5f5",
+              backgroundColor: "#fff3e0",
               borderRadius: "8px",
               textAlign: "center",
             }}
           >
-            <h3 style={{ margin: "0 0 0.5rem 0", color: "#7b1fa2" }}>Completadas</h3>
-            <p style={{ fontSize: "2rem", fontWeight: "bold", margin: 0, color: "#7b1fa2" }}>{stats.completed}</p>
+            <h3 style={{ margin: "0 0 0.5rem 0", color: "#f57c00" }}>Extra</h3>
+            <p style={{ fontSize: "2rem", fontWeight: "bold", margin: 0, color: "#f57c00" }}>{stats.extra}</p>
           </div>
 
           <div
@@ -134,7 +125,7 @@ const Dashboard: React.FC = () => {
             }}
           >
             <h3 style={{ margin: "0 0 0.5rem 0", color: "#c62828" }}>Canceladas</h3>
-            <p style={{ fontSize: "2rem", fontWeight: "bold", margin: 0, color: "#c62828" }}>{stats.cancelled}</p>
+            <p style={{ fontSize: "2rem", fontWeight: "bold", margin: 0, color: "#c62828" }}>{stats.cancelado}</p>
           </div>
         </div>
       </div>
@@ -157,30 +148,20 @@ const Dashboard: React.FC = () => {
                   <th>Hora</th>
                   <th>Paciente</th>
                   <th>Doctor</th>
-                  <th>Motivo</th>
                   <th>Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {todayAppointments.map((appointment) => (
                   <tr key={appointment.id}>
-                    <td>{formatTime(appointment.appointmentTime)}</td>
+                    <td>{formatTime(appointment.fechaHora)}</td>
+                    <td>Paciente ID: {appointment.pacienteId}</td>
+                    <td>Médico ID: {appointment.medicoId}</td>
                     <td>
-                      {appointment.patient ? `${appointment.patient.firstName} ${appointment.patient.lastName}` : "N/A"}
-                    </td>
-                    <td>
-                      {appointment.doctor
-                        ? `Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName}`
-                        : "N/A"}
-                    </td>
-                    <td>{appointment.reason}</td>
-                    <td>
-                      <span className={`status-badge status-${appointment.status.toLowerCase()}`}>
-                        {appointment.status === AppointmentStatus.SCHEDULED && "Programada"}
-                        {appointment.status === AppointmentStatus.CONFIRMED && "Confirmada"}
-                        {appointment.status === AppointmentStatus.CANCELLED && "Cancelada"}
-                        {appointment.status === AppointmentStatus.COMPLETED && "Completada"}
-                        {appointment.status === AppointmentStatus.NO_SHOW && "No Asistió"}
+                      <span className={`status-badge status-${appointment.estado.toLowerCase()}`}>
+                        {appointment.estado === "CONFIRMADO" && "Confirmado"}
+                        {appointment.estado === "CANCELADO" && "Cancelado"}
+                        {appointment.estado === "EXTRA" && "Extra"}
                       </span>
                     </td>
                   </tr>

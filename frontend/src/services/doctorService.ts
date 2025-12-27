@@ -1,5 +1,5 @@
 import { api } from "./api"
-import type { Doctor, CreateDoctorRequest } from "../types/appointment"
+import type { Doctor, CreateDoctorRequest, DoctorSchedule } from "../types/appointment"
 
 export class DoctorService {
   private static readonly BASE_PATH = "/api/medicos"
@@ -25,6 +25,16 @@ export class DoctorService {
     })
     return response.data
   }
+
+  static async getDoctorSchedules(id: number): Promise<DoctorSchedule[]> {
+    const response = await api.get<DoctorSchedule[]>(`${this.BASE_PATH}/${id}/horarios`)
+    return response.data
+  }
+
+  static async updateDoctorSchedules(id: number, schedules: DoctorSchedule[]): Promise<DoctorSchedule[]> {
+    const response = await api.put<DoctorSchedule[]>(`${this.BASE_PATH}/${id}/horarios`, schedules)
+    return response.data
+  }
 }
 
 export const createDoctor = (request: CreateDoctorRequest): Promise<Doctor> => {
@@ -41,4 +51,12 @@ export const checkAvailability = (id: number, fechaHora: string): Promise<boolea
 
 export const getAllDoctors = (): Promise<Doctor[]> => {
   return DoctorService.getAllDoctors()
+}
+
+export const getDoctorSchedules = (id: number): Promise<DoctorSchedule[]> => {
+  return DoctorService.getDoctorSchedules(id)
+}
+
+export const updateDoctorSchedules = (id: number, schedules: DoctorSchedule[]): Promise<DoctorSchedule[]> => {
+  return DoctorService.updateDoctorSchedules(id, schedules)
 }
